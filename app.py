@@ -38,7 +38,7 @@ def test_response(text):
     response = "ok"
     print(response)
     # 重組回應
-    answer = response['choices'][0]['text'].replace('。','')
+    answer = "ok"
     return answer
 
 
