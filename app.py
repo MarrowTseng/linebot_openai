@@ -48,7 +48,7 @@ def analyze_mbti_type(event):
     mbti_type = ""
     for key in mbti_questions.keys():
         mbti_type += user_answers[key]
-    result_message = f"你的MBTI人格類型是{mbti_type}。"
+    result_message = f"你的MBTI人格類型是{mbti_type}。你可以在以下網址找到更多相關內容：https://www.instagram.com/"
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=result_message))
 
 # 處理MBTI測試的開始
