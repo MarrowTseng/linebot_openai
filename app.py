@@ -2,10 +2,7 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
-import tempfile, os
-import datetime
-import time
-import traceback
+import os
 import random
 
 app = Flask(__name__)
@@ -101,7 +98,6 @@ def select_random_questions():
     selected_sn_questions = random.sample([mbti_questions_full[i] for i in sn_questions], 4)
     selected_tf_questions = random.sample([mbti_questions_full[i] for i in tf_questions], 4)
     selected_jp_questions = random.sample([mbti_questions_full[i] for i in jp_questions], 4)
-
     return selected_ei_questions + selected_sn_questions + selected_tf_questions + selected_jp_questions
 
 # 儲存用戶回答的資訊
@@ -185,17 +181,14 @@ def home():
 def callback():
     # 獲取請求標頭中的簽名
     signature = request.headers['X-Line-Signature']
-
     # 獲取請求正文
     body = request.get_data(as_text=True)
     app.logger.info("Request body: " + body)
-
     # 處理 webhook 正文
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-
     return 'OK'
 
 # 處理用戶加入好友事件
@@ -217,10 +210,7 @@ def handle_message(event):
         mbti_user_questions[user_id] = select_random_questions()
         mbti_user_answers[user_id] = []
         question = mbti_user_questions[user_id][0]
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=question)
-        )
+        send_question_with_buttons(event.reply_token, question)
     elif user_id in mbti_user_questions:
         answers = mbti_user_answers[user_id]
         questions = mbti_user_questions[user_id]
@@ -229,10 +219,7 @@ def handle_message(event):
             answers.append(user_message)
             if len(answers) < len(questions):
                 question = questions[len(answers)]
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=question)
-                )
+                send_question_with_buttons(event.reply_token, question)
             else:
                 mbti_result = calculate_mbti_result(answers)
                 result = mbti_results.get(mbti_result, None)
@@ -260,6 +247,22 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text='歡迎使用MBTI機器人！如果要開始測驗，請輸入"開始"。')
         )
+
+def send_question_with_buttons(reply_token, question):
+    question_parts = question.split("\na) ")
+    text = question_parts[0]
+    options = question_parts[1].split("\nb) ")
+    button_template = TemplateSendMessage(
+        alt_text='MBTI問題',
+        template=ButtonsTemplate(
+            text=text,
+            actions=[
+                MessageAction(label="a) " + options[0], text="a"),
+                MessageAction(label="b) " + options[1], text="b")
+            ]
+        )
+    )
+    line_bot_api.reply_message(reply_token, button_template)
 
 def calculate_mbti_result(answers):
     counts = {
