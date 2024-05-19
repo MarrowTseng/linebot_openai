@@ -2,7 +2,6 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import *
-#======python的函數庫==========
 import tempfile, os
 import datetime
 import time
@@ -209,30 +208,33 @@ def handle_follow(event):
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
-    user_message = event.message.text
+    user_message = event.message.text.lower()
+
     if user_id not in mbti_user_answers:
         mbti_user_answers[user_id] = []
-    
-    current_question_index = len(mbti_user_answers[user_id])
 
-    if user_message.lower() in ["開始", "重新開始測試"]:
+    if user_message in ["開始", "重新開始測試"]:
+        mbti_user_questions[user_id] = select_random_questions()
         mbti_user_answers[user_id] = []
-        question = select_random_questions()[0]
+        question = mbti_user_questions[user_id][0]
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=question)
         )
-    elif user_id in mbti_user_answers:
-        if len(mbti_user_answers[user_id]) < len(mbti_questions):
-            mbti_user_answers[user_id].append(user_message)
-            if len(mbti_user_answers[user_id]) < len(mbti_questions):
-                question = mbti_questions[len(mbti_user_answers[user_id])]
+    elif user_id in mbti_user_questions:
+        answers = mbti_user_answers[user_id]
+        questions = mbti_user_questions[user_id]
+
+        if len(answers) < len(questions):
+            answers.append(user_message)
+            if len(answers) < len(questions):
+                question = questions[len(answers)]
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text=question)
                 )
             else:
-                mbti_result = calculate_mbti_result(mbti_user_answers[user_id])
+                mbti_result = calculate_mbti_result(answers)
                 result = mbti_results.get(mbti_result, None)
                 if result:
                     line_bot_api.reply_message(
@@ -247,6 +249,7 @@ def handle_message(event):
                         TextSendMessage(text="無法計算您的 MBTI 結果。請重新開始測試。")
                     )
                 del mbti_user_answers[user_id]
+                del mbti_user_questions[user_id]
         else:
             line_bot_api.reply_message(
                 event.reply_token,
@@ -258,9 +261,7 @@ def handle_message(event):
             TextSendMessage(text='歡迎使用MBTI機器人！如果要開始測驗，請輸入"開始"。')
         )
 
-
 def calculate_mbti_result(answers):
-    # 初始化計數
     counts = {
         "E": 0, "I": 0,
         "S": 0, "N": 0,
@@ -268,7 +269,6 @@ def calculate_mbti_result(answers):
         "J": 0, "P": 0
     }
 
-    # 根據答案計算每個維度的分數
     for i, answer in enumerate(answers):
         if i < 2:
             counts["E" if answer == "a" else "I"] += 1
@@ -279,7 +279,6 @@ def calculate_mbti_result(answers):
         elif i < 14:
             counts["J" if answer == "a" else "P"] += 1
 
-    # 構建 MBTI 類型
     mbti_type = "".join([
         "E" if counts["E"] > counts["I"] else "I",
         "S" if counts["S"] > counts["N"] else "N",
