@@ -252,17 +252,47 @@ def send_question_with_buttons(reply_token, question):
     question_parts = question.split("\na) ")
     text = question_parts[0]
     options = question_parts[1].split("\nb) ")
-    button_template = TemplateSendMessage(
-        alt_text='MBTI問題',
-        template=ButtonsTemplate(
-            text=text,
-            actions=[
-                MessageAction(label="a) " + options[0], text="a"),
-                MessageAction(label="b) " + options[1], text="b")
+    
+    flex_message = {
+        "type": "bubble",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": text,
+                    "wrap": True,
+                    "weight": "bold",
+                    "size": "md"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": options[0],
+                        "text": "a"
+                    },
+                    "style": "primary",
+                    "color": "#FF6F61",
+                    "margin": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": options[1],
+                        "text": "b"
+                    },
+                    "style": "primary",
+                    "color": "#FF6F61",
+                    "margin": "sm"
+                }
             ]
-        )
-    )
-    line_bot_api.reply_message(reply_token, button_template)
+        }
+    }
+    
+    line_bot_api.reply_message(reply_token, FlexSendMessage(alt_text='MBTI問題', contents=flex_message))
 
 def calculate_mbti_result(answers):
     counts = {
